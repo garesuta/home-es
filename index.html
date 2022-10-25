@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+
+<head>
+    <meta charset='utf-8' />
+    <title>Khon Kaen Real Estate Location</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1' />
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v2.10.0/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v2.10.0/mapbox-gl.css' rel='stylesheet' />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <style>
+        .filter-group {
+            font: 32px/40px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+            font-weight: 900;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1;
+            border-radius: 3px;
+            height: 40%;
+            width: 20%;
+            color: black;
+        }
+
+        .filter-group input[type='checkbox']:first-child+label {
+            border-radius: 3px 3px 0 0;
+        }
+
+        .filter-group label:last-child {
+            border-radius: 0 0 3px 3px;
+            border: none;
+        }
+
+        .filter-group input[type='checkbox'] {
+            display: none;
+        }
+
+        .filter-group input[type='checkbox']+label {
+            background-color: #A8E890;
+            display: block;
+            cursor: pointer;
+            padding: 10px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.25);
+        }
+
+        .filter-group input[type='checkbox']+label {
+            background-color: #A8E890;
+            text-transform: capitalize;
+        }
+
+        .filter-group input[type='checkbox']+label:hover,
+        .filter-group input[type='checkbox']:checked+label {
+            background-color: #A8E890;
+        }
+
+        .filter-group input[type='checkbox']:checked+label:before {
+            content: '✔';
+            margin-right: 5px;
+        }
+
+        .mapboxgl-popup {
+            max-width: 400px;
+            font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+            font-weight: 900;
+        }
+
+        #features {
+            position: absolute;
+            bottom: 20%;
+            bottom: 15px;
+            left: 10px;
+            width: 20%;
+            overflow: auto;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 15px;
+        }
+
+        #map canvas {
+            cursor: crosshair;
+        }
+    </style>
+
+    <nav id="filter-group" class="filter-group"></nav>
+    <div id='map'></div>
+    <div id="features"></div>
+    <script>
+        mapboxgl.accessToken = 'pk.eyJ1IjoiZ2FyZXN1dGEiLCJhIjoiY2w0ejJpbWx3MWxyZjNvbnpzbDN0dnFpMiJ9.XRUhjyDsZZgUULIrV-3nTg';
+        const filterGroup = document.getElementById('filter-group');
+        const map = new mapboxgl.Map({
+            container: 'map', // Specify the container ID
+            style: 'mapbox://styles/garesuta/cl9nnfn9c002q14mz2vqr6u8q', // Specify which map style to use
+            center: [102.82893887331345, 16.44095624692918], // Specify the starting position [lng, lat]
+            zoom: 12, // Specify the starting zoom
+            pitch: 45 //degree from vertical
+        });
+        const cat = ['บ้าน', 'คอนโด', 'ทาวน์โฮม'];
+        const joint = [0, 1];
+        map.on('load', () => {
+            map.addSource('data',
+                {
+                    type: 'vector',
+                    url: 'mapbox://garesuta.8sg1jat9'
+                });
+            for (let idx in cat) {
+
+                map.addLayer({
+                    'id': idx,
+                    'type': 'circle',
+                    'source': {
+                        type: 'vector',
+                        url: 'mapbox://garesuta.8sg1jat9'
+                    },
+                    'source-layer': 'kk_-_exhibition-cu9rp4',
+                    'paint': {
+                        'circle-radius': 18,
+                        'circle-opacity': 0.8,
+                        'circle-color': "#14C38E",
+                    },
+                    'filter': ['==', 'proptype', cat[idx]]
+                });
+                map.addLayer({
+                    'id': cat[idx],
+                    'type': 'symbol',
+                    'source': {
+                        type: 'vector',
+                        url: 'mapbox://garesuta.8sg1jat9'
+                    },
+                    'source-layer': 'kk_-_exhibition-cu9rp4',
+                    'layout': {
+                        'text-field': ['get', 'abv.price'],
+                        'text-size': 15
+                    },
+                    'filter': ['==', 'proptype', cat[idx]]
+                });
+                const input = document.createElement('input');
+                input.type = 'checkbox';
+                input.id = idx;
+                input.checked = true;
+                filterGroup.appendChild(input);
+
+                const label = document.createElement('label');
+                label.setAttribute('for', idx);
+                label.textContent = cat[idx];
+                filterGroup.appendChild(label);
+
+                // When the checkbox changes, update the visibility of the layer.
+                input.addEventListener('change', (e) => {
+                    map.setLayoutProperty(
+                        idx,
+                        'visibility',
+                        e.target.checked ? 'visible' : 'none'
+                    );
+                });
+                input.addEventListener('change', (e) => {
+                    map.setLayoutProperty(
+                        cat[idx],
+                        'visibility',
+                        e.target.checked ? 'visible' : 'none'
+                    );
+                });
+                map.on('click', idx, (e) => {
+                    const te = "<a href=" + e.features[0].properties.website + ">" + e.features[0].properties.name + "</a>";
+                    new mapboxgl.Popup()
+                        .setLngLat(e.lngLat)
+                        .setHTML(te)
+                        .addTo(map);
+                });
+
+                // Change the cursor to a pointer when
+                // the mouse is over the states layer.
+                map.on('mouseenter', idx, () => {
+                    map.getCanvas().style.cursor = 'pointer';
+                });
+
+                // Change the cursor back to a pointer
+                // when it leaves the states layer.
+                map.on('mouseleave', idx, () => {
+                    map.getCanvas().style.cursor = '';
+                });
+                map.on('mousemove', idx,(e) => {
+                    document.getElementById('features').innerHTML =
+                        '<a>ชื่อโครงการ : </a>' + e.features[0].properties.name +
+                        '<br />' +
+                        '<a>ราคาเริ่มต้น : </a>'+
+                        e.features[0].properties.price + '<a> บาท</a>'+
+                        '<br />' +
+                        '<a>ประเภท : </a>'+
+                        e.features[0].properties.proptype +
+                        '<br />' +
+                        '<a>โซน : </a>'+
+                        e.features[0].properties.zone ;
+                    
+                       
+                });
+            }
+        });
+
+    </script>
+
+</body>
+
+</html>
